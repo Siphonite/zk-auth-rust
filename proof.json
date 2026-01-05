@@ -3,7 +3,7 @@
   "curve": "bn254",
   "circuit": "zk-login-poseidon",
   "public_hash": "11412199906048560014214311380782114621087869620010287450824390890758438505605",
-  "proof": "Zl54Vo3WL/5mRuQJxZy8Rh5kZ7JrRHacKdyOemcTVA1XXchS2OfuNCQ1qhXLjjIvdjJTxfe9eL5KR6IWdpz1IeDm78Nz8ZFHfctIqAJ92HfXExoBLPFPPNQseIlhQEmGAP/lNifRIR8BpI+FCnoVgmKa0LnWpTnJE64a97ciuKc=",
+  "proof": "NzDGawFe+IPWHkMOQ4HV/gWYJq4o4R6lQQ4+Ed2YeAlpqvdSd2T8yIQ9w9wgBW7BLvDHi7ild6w5ZFnMB2uXAL8TfE+bWuYDSwi0y5olhcqtfLheOdr24+5E2HzPI5sAwJHWGgRRuj+fY8qkz7zXPdd6fKTdWztjSXKhb9rp2qo=",
   "poseidon_params_hash": "0xffa320eb80d2b624d31a54a83bc5d196b7fd116c4e0a808d1b3d6173da144090",
-  "created_at": 1767621653
+  "created_at": 1767622440
 }

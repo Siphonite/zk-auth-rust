@@ -1,36 +1,31 @@
 use ark_bn254::{Bn254, Fr};
 use ark_crypto_primitives::crh::{CRHScheme, poseidon::CRH};
 use ark_groth16::Groth16;
-use ark_serialize::CanonicalSerialize;
+use ark_serialize::{CanonicalSerialize, CanonicalDeserialize};
 use base64::{engine::general_purpose, Engine as _};
 use rand::thread_rng;
+use std::fs::File;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use crate::circuit::HashCircuit;
 use crate::poseidon_params::{poseidon_params, poseidon_params_hash};
 use crate::proof_format::ZkProof;
 
-/// Generate a portable ZK proof
+/// Generate a ZK proof using a persisted proving key
 pub fn generate_proof(secret: Fr) -> ZkProof {
     let mut rng = thread_rng();
     let params = poseidon_params();
 
-    // Public hash
+    // Compute public hash
     let public_hash = CRH::<Fr>::evaluate(&params, [secret]).unwrap();
 
-    // Circuit for setup
-    let circuit = HashCircuit {
-        secret: Some(secret),
-        public_hash: Some(public_hash),
-        params: Some(params.clone()),
-    };
+    // Load proving key
+    let mut pk_file = File::open("keys/proving_key.bin")
+        .expect("Proving key not found. Run `setup` first.");
 
     let pk =
-        Groth16::<Bn254>::generate_random_parameters_with_reduction(
-            circuit,
-            &mut rng,
-        )
-        .unwrap();
+        ark_groth16::ProvingKey::<Bn254>::deserialize_compressed(&mut pk_file)
+            .unwrap();
 
     // Circuit for proving
     let circuit = HashCircuit {

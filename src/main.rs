@@ -1,6 +1,7 @@
 mod circuit;
 mod prove;
 mod verify;
+mod setup;
 mod poseidon_params;
 mod proof_format;
 
@@ -9,6 +10,7 @@ use ark_bn254::Fr;
 
 use crate::prove::generate_proof;
 use crate::verify::verify_proof;
+use crate::setup::run_setup;
 use crate::proof_format::ZkProof;
 
 #[derive(Parser)]
@@ -21,6 +23,9 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
+    /// Run trusted setup (one-time)
+    Setup,
+
     /// Generate a proof
     Prove {
         #[arg(long)]
@@ -41,6 +46,10 @@ fn main() {
     let cli = Cli::parse();
 
     match cli.command {
+        Commands::Setup => {
+            run_setup();
+        }
+
         Commands::Prove { secret, out } => {
             let secret_fr = Fr::from(secret);
             let proof = generate_proof(secret_fr);

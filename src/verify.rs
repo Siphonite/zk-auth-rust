@@ -1,17 +1,18 @@
 use ark_bn254::{Bn254, Fr};
 use ark_groth16::{Groth16, prepare_verifying_key};
 use ark_serialize::CanonicalDeserialize;
+use base64::{engine::general_purpose, Engine as _};
+use std::fs::File;
+use std::str::FromStr;
 
-use crate::circuit::HashCircuit;
 use crate::poseidon_params::{poseidon_params, poseidon_params_hash};
 use crate::proof_format::ZkProof;
-use std::str::FromStr;
-use base64::{engine::general_purpose, Engine as _};
 
+/// Verify a ZK proof using a persisted verifying key
 pub fn verify_proof(proof: ZkProof) -> bool {
     let params = poseidon_params();
 
-    // Check Poseidon parameters integrity
+    // Ensure Poseidon parameters match
     if poseidon_params_hash(&params) != proof.poseidon_params_hash {
         return false;
     }
@@ -19,27 +20,19 @@ pub fn verify_proof(proof: ZkProof) -> bool {
     let public_hash = Fr::from_str(&proof.public_hash).unwrap();
     let proof_bytes = general_purpose::STANDARD.decode(proof.proof).unwrap();
 
-    let circuit = HashCircuit {
-        secret: None,
-        public_hash: Some(public_hash),
-        params: Some(params.clone()),
-    };
+    // Load verifying key
+    let mut vk_file = File::open("keys/verifying_key.bin")
+        .expect("Verifying key not found. Run `setup` first.");
 
-    let mut rng = rand::thread_rng();
-    let vk_params =
-        Groth16::<Bn254>::generate_random_parameters_with_reduction(
-            circuit,
-            &mut rng,
-        )
-        .unwrap();
+    let vk =
+        ark_groth16::VerifyingKey::<Bn254>::deserialize_compressed(&mut vk_file)
+            .unwrap();
 
-    let pvk = prepare_verifying_key(&vk_params.vk);
+    let pvk = prepare_verifying_key(&vk);
 
     let proof =
-        ark_groth16::Proof::<Bn254>::deserialize_compressed(
-            &*proof_bytes,
-        )
-        .unwrap();
+        ark_groth16::Proof::<Bn254>::deserialize_compressed(&*proof_bytes)
+            .unwrap();
 
     Groth16::<Bn254>::verify_proof(&pvk, &proof, &[public_hash]).unwrap()
 }
