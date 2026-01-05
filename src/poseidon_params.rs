@@ -1,10 +1,10 @@
 use ark_bn254::Fr;
 use ark_crypto_primitives::sponge::poseidon::{PoseidonConfig, find_poseidon_ark_and_mds};
+use ark_ff::{PrimeField, BigInteger};
+use sha2::{Sha256, Digest};
 
-/// Returns stable, pre-computed Poseidon parameters for BN254.
-/// These settings are standard for BN254 Poseidon and never change.
+/// Deterministic Poseidon parameters for BN254
 pub fn poseidon_params() -> PoseidonConfig<Fr> {
-    // BN254 standard Poseidon settings
     let full_rounds: usize = 8;
     let partial_rounds: usize = 57;
     let alpha: u64 = 5;
@@ -28,4 +28,25 @@ pub fn poseidon_params() -> PoseidonConfig<Fr> {
         rate,
         capacity,
     )
+}
+
+/// Hash Poseidon parameters so verifier can ensure consistency
+pub fn poseidon_params_hash<F: PrimeField>(
+    params: &PoseidonConfig<F>,
+) -> String {
+    let mut hasher = Sha256::new();
+
+    for row in &params.mds {
+        for el in row {
+            hasher.update(el.into_bigint().to_bytes_le());
+        }
+    }
+
+    for round in &params.ark {
+        for el in round {
+            hasher.update(el.into_bigint().to_bytes_le());
+        }
+    }
+
+    format!("0x{:x}", hasher.finalize())
 }

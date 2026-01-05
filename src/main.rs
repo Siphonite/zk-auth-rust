@@ -2,20 +2,18 @@ mod circuit;
 mod prove;
 mod verify;
 mod poseidon_params;
+mod proof_format;
 
-use std::str::FromStr;
 use clap::{Parser, Subcommand};
 use ark_bn254::Fr;
-use base64::{Engine as _, engine::general_purpose::STANDARD as BASE64};
 
 use crate::prove::generate_proof;
 use crate::verify::verify_proof;
-use crate::circuit::HashCircuit;
-use crate::poseidon_params::poseidon_params;
+use crate::proof_format::ZkProof;
 
 #[derive(Parser)]
 #[command(name = "zk-login-aidp")]
-#[command(about = "Zero-knowledge login CLI")]
+#[command(about = "ZK Login CLI powered by Poseidon + Groth16")]
 struct Cli {
     #[command(subcommand)]
     command: Commands,
@@ -23,7 +21,7 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
-    /// Generate a proof for a secret value
+    /// Generate a proof
     Prove {
         #[arg(long)]
         secret: u64,
@@ -32,7 +30,7 @@ enum Commands {
         out: String,
     },
 
-    /// Verify a proof JSON file
+    /// Verify a proof
     Verify {
         #[arg(long)]
         proof: String,
@@ -45,37 +43,22 @@ fn main() {
     match cli.command {
         Commands::Prove { secret, out } => {
             let secret_fr = Fr::from(secret);
-            let params = poseidon_params();
+            let proof = generate_proof(secret_fr);
 
-            let (proof_bytes, public_hash) = generate_proof(secret_fr, params.clone());
-
-            let obj = serde_json::json!({
-                "proof": BASE64.encode(&proof_bytes),
-                "public_hash": public_hash.to_string()
-            });
-
-            std::fs::write(out.clone(), serde_json::to_string_pretty(&obj).unwrap()).unwrap();
+            std::fs::write(
+                &out,
+                serde_json::to_string_pretty(&proof).unwrap(),
+            )
+            .unwrap();
 
             println!("Proof written to {}", out);
         }
 
         Commands::Verify { proof } => {
-            let data: serde_json::Value =
-                serde_json::from_str(&std::fs::read_to_string(proof).unwrap()).unwrap();
+            let contents = std::fs::read_to_string(proof).unwrap();
+            let proof: ZkProof = serde_json::from_str(&contents).unwrap();
 
-            let proof_bytes = BASE64.decode(data["proof"].as_str().unwrap()).unwrap();
-            let public_hash = Fr::from_str(data["public_hash"].as_str().unwrap()).unwrap();
-
-            let params = poseidon_params();
-
-            let circuit = HashCircuit {
-                secret: None,
-                public_hash: Some(public_hash),
-                params: Some(params.clone()),
-            };
-
-            let ok = verify_proof(proof_bytes, public_hash, circuit);
-
+            let ok = verify_proof(proof);
             println!("Proof valid? {}", ok);
         }
     }
